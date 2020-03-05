@@ -2,6 +2,7 @@ import argparse
 import os
 import pandas as pd
 import pdftotext
+import re
 
 
 def parse_pdf_to_fwf(folder, file):
@@ -43,9 +44,14 @@ def check_and_clean_df(df):
         if col != expcol:
             raise Exception("Expected column name to be {}, not {}".format(expcol, col))
 
-    print(df)
-
     # Check first column (should be three-parts, parse and separate, remove total row and retain for final check)
+    df["Code"], df["Short"], df["Long"] = zip(*df["ELEMENT DETAILS"].apply(parse_element_details))
+
+    # Drop total row for now
+    total = df.loc[df["Long"] == "TOTAL"]
+    df.drop(df.loc[df["Long"] == "TOTAL"].index, inplace=True)
+
+    print(df)
 
     # Check second column (should be numbers with max 2 dp, change NaN -> 0, move ending - to start for negative)
 
@@ -56,6 +62,23 @@ def check_and_clean_df(df):
     # Check fifth column (should be numbers with max 2 dp, change NaN -> 0, move ending - to start for negative)
 
     # Check total
+
+
+def parse_element_details(elt_details):
+
+    # This regex should catch:
+    #   - code: (optional) four (or more) digit number
+    #   - short: (optional) one to six characters (no spaces), bounded at end by at least two consecutive spaces
+    #   - long: characters, possibly separated by single spaces
+
+    m = re.match(r"(?P<code>\d{4}) +(?P<short>\S{1,6}(?=\s{2}))? +(?P<long>(\S+\s?)+)", elt_details)
+    if m is None:
+        if elt_details == "TOTAL":
+            return None, None, "TOTAL"
+        else:
+            raise Exception("Cannot parse row '{}'".format(elt_details))
+    else:
+        return m["code"], m["short"], m["long"]
 
 
 if __name__ == "__main__":
