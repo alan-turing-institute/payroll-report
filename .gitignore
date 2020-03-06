@@ -1,8 +1,17 @@
+# Input files
 *.pdf
+
+# Intermediate files used in processing
 *.txt
 !requirements.txt
 
+# Spreadsheets and temp files associated with them
+*.xls*
+*.xlk
+
+# Virtual environment
 venv
 
+# Editors
 .vscode
 .idea
