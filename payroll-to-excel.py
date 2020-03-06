@@ -1,4 +1,5 @@
 import argparse
+import numpy as np
 import os
 import pandas as pd
 import pdftotext
@@ -34,6 +35,7 @@ def fwf_to_df(folder, file):
 def check_and_clean_df(df):
 
     expected_columns = ["ELEMENT DETAILS", "BROUGHT FORWARD", "THIS PERIOD", "ADJUSTMENT", "CARRIED FORWARD"]
+    financial_columns = ["BROUGHT FORWARD", "THIS PERIOD", "ADJUSTMENT", "CARRIED FORWARD"]
 
     # Check columns
 
@@ -47,21 +49,21 @@ def check_and_clean_df(df):
     # Check first column (should be three-parts, parse and separate, remove total row and retain for final check)
     df["Code"], df["Short"], df["Long"] = zip(*df["ELEMENT DETAILS"].apply(parse_element_details))
 
-    # Drop total row for now
+    # Check second - fifth columns (should be numbers with max 2 dp, move ending - to start for negative)
+    for col in financial_columns:
+        df[col] = df[col].apply(parse_and_check_financial_columns)
+
+    # Drop old element details column and move total row to a separate table
+    df = df.drop(columns=["ELEMENT DETAILS"])
     total = df.loc[df["Long"] == "TOTAL"]
     df.drop(df.loc[df["Long"] == "TOTAL"].index, inplace=True)
 
+    # Check totals
+    for col in financial_columns:
+        if df[col].sum().round(2) != total[col].iloc[0]:
+            raise Exception("Total of column '{}' does not match value from original document".format(col))
+
     print(df)
-
-    # Check second column (should be numbers with max 2 dp, change NaN -> 0, move ending - to start for negative)
-
-    # Check third column (should be numbers with max 2 dp, change NaN -> 0, move ending - to start for negative)
-
-    # Check fourth column (should be numbers with max 2 dp, change NaN -> 0, move ending - to start for negative)
-
-    # Check fifth column (should be numbers with max 2 dp, change NaN -> 0, move ending - to start for negative)
-
-    # Check total
 
 
 def parse_element_details(elt_details):
@@ -74,11 +76,27 @@ def parse_element_details(elt_details):
     m = re.match(r"(?P<code>\d{4}) +(?P<short>\S{1,6}(?=\s{2}))? +(?P<long>(\S+\s?)+)", elt_details)
     if m is None:
         if elt_details == "TOTAL":
-            return None, None, "TOTAL"
+            return np.nan, np.nan, "TOTAL"
         else:
             raise Exception("Cannot parse row '{}'".format(elt_details))
     else:
-        return m["code"], m["short"], m["long"]
+        return m["code"], m["short"] if m["short"] is not None else np.nan, m["long"]
+
+def parse_and_check_financial_columns(value):
+
+    # All values in these columns should either refer to monetary values (two decimal places, optional -ve sign at end)
+    # or be NaN
+
+    if pd.isna(value):
+        return value
+
+    m = re.match(r"(?P<value>\d+.\d{2}){1}(?P<sign>-)?", value)
+    if m["sign"] is None:
+        return float(m["value"])
+    elif m["sign"] == "-":
+        return -float(m["value"])
+    else:
+        raise Exception("Unexpected entry in column: '{}'".format(value)) 
 
 
 if __name__ == "__main__":
