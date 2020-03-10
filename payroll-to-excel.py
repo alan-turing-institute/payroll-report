@@ -104,8 +104,7 @@ def combine_dfs(first, second):
 
     # Combine into a single dataframe
 
-    print(first)
-    print(second)
+    return pd.merge(first, second, on=["Code", "Short", "Long"], suffixes=[" 1", " 2"])
 
 
 if __name__ == "__main__":
@@ -124,4 +123,5 @@ if __name__ == "__main__":
     second_df = fwf_to_df(args.folder, first_fwf)
     second_df = check_and_clean_df(second_df)
 
-    combine_dfs(first_df, second_df)
+    df = combine_dfs(first_df, second_df)
+    print(df)
