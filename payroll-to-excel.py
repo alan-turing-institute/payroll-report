@@ -63,7 +63,7 @@ def check_and_clean_df(df):
         if df[col].sum().round(2) != total[col].iloc[0]:
             raise Exception("Total of column '{}' does not match value from original document".format(col))
 
-    print(df)
+    return df
 
 
 def parse_element_details(elt_details):
@@ -82,6 +82,7 @@ def parse_element_details(elt_details):
     else:
         return m["code"], m["short"] if m["short"] is not None else np.nan, m["long"]
 
+
 def parse_and_check_financial_columns(value):
 
     # All values in these columns should either refer to monetary values (two decimal places, optional -ve sign at end)
@@ -99,14 +100,28 @@ def parse_and_check_financial_columns(value):
         raise Exception("Unexpected entry in column: '{}'".format(value)) 
 
 
+def combine_dfs(first, second):
+
+    # Combine into a single dataframe
+
+    print(first)
+    print(second)
+
+
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--folder", type=str, default=os.getcwd(), help="Path to directory containing pdf reports")
     parser.add_argument("--first", type=str, help="Name of the file containing the first month's data")
+    parser.add_argument("--second", type=str, help="Name of the file containing the second month's data")
     args = parser.parse_args()
 
     first_fwf = parse_pdf_to_fwf(args.folder, args.first)
     first_df = fwf_to_df(args.folder, first_fwf)
     first_df = check_and_clean_df(first_df)
 
+    second_fwf = parse_pdf_to_fwf(args.folder, args.second)
+    second_df = fwf_to_df(args.folder, first_fwf)
+    second_df = check_and_clean_df(second_df)
+
+    combine_dfs(first_df, second_df)
