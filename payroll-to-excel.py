@@ -109,8 +109,14 @@ def combine_dfs(first, second):
 
 def write_to_xlsx(df, folder, filename):
 
+    output_df = df[["Code", "Short", "Long", "THIS PERIOD 1", "THIS PERIOD 2"]]
+    output_df = output_df.assign(Equal=False)
+    output_df['Equal'] = np.where(((output_df["THIS PERIOD 1"] == output_df["THIS PERIOD 2"]) |
+                                  (output_df["THIS PERIOD 2"].isnull() & output_df["THIS PERIOD 2"].isnull())),
+                                  True, False)
+
     writer = pd.ExcelWriter(os.path.join(folder, filename), engine="xlsxwriter")
-    df.to_excel(writer, sheet_name='Sheet1')
+    output_df.to_excel(writer, sheet_name='Sheet1')
     writer.save()
 
 
