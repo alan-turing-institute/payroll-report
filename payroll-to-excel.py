@@ -107,12 +107,20 @@ def combine_dfs(first, second):
     return pd.merge(first, second, on=["Code", "Short", "Long"], suffixes=[" 1", " 2"])
 
 
+def write_to_xlsx(df, folder, filename):
+
+    writer = pd.ExcelWriter(os.path.join(folder, filename), engine="xlsxwriter")
+    df.to_excel(writer, sheet_name='Sheet1')
+    writer.save()
+
+
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--folder", type=str, default=os.getcwd(), help="Path to directory containing pdf reports")
     parser.add_argument("--first", type=str, help="Name of the file containing the first month's data")
     parser.add_argument("--second", type=str, help="Name of the file containing the second month's data")
+    parser.add_argument("--output", type=str, default="output.xlsx", help="Name of the output Excel file")
     args = parser.parse_args()
 
     first_fwf = parse_pdf_to_fwf(args.folder, args.first)
@@ -123,5 +131,5 @@ if __name__ == "__main__":
     second_df = fwf_to_df(args.folder, first_fwf)
     second_df = check_and_clean_df(second_df)
 
-    df = combine_dfs(first_df, second_df)
-    print(df)
+    combined_df = combine_dfs(first_df, second_df)
+    write_to_xlsx(combined_df, args.folder, args.output)
