@@ -80,7 +80,7 @@ def parse_element_details(elt_details):
         else:
             raise Exception("Cannot parse row '{}'".format(elt_details))
     else:
-        return m["code"], m["short"] if m["short"] is not None else np.nan, m["long"]
+        return int(m["code"]), m["short"] if m["short"] is not None else np.nan, m["long"]
 
 
 def parse_and_check_financial_columns(value):
@@ -109,14 +109,29 @@ def combine_dfs(first, second):
 
 def write_to_xlsx(df, folder, filename):
 
-    output_df = df[["Code", "Short", "Long", "THIS PERIOD 1", "THIS PERIOD 2"]]
+    output_columns = ["Code", "Short", "Long", "THIS PERIOD 1", "THIS PERIOD 2"]
+
+    output_df = df[output_columns]
     output_df = output_df.assign(Equal=False)
     output_df['Equal'] = np.where(((output_df["THIS PERIOD 1"] == output_df["THIS PERIOD 2"]) |
                                   (output_df["THIS PERIOD 2"].isnull() & output_df["THIS PERIOD 2"].isnull())),
                                   True, False)
 
     writer = pd.ExcelWriter(os.path.join(folder, filename), engine="xlsxwriter")
-    output_df.to_excel(writer, sheet_name='Sheet1')
+    output_df.to_excel(writer, sheet_name="Sheet1")
+
+    workbook = writer.book
+    worksheet = writer.sheets["Sheet1"]
+
+    format_code = workbook.add_format({"num_format": "0000"})
+    format_financial = workbook.add_format({"num_format": "#,##0.00"})
+
+    worksheet.set_column(1, 1, 9.17, format_code)
+    worksheet.set_column(2, 2, 9.17)
+    worksheet.set_column(3, 3, 22.5)
+    worksheet.set_column(4, 4, 16.67, format_financial)
+    worksheet.set_column(5, 5, 16.67, format_financial)
+
     writer.save()
 
 
