@@ -4,6 +4,7 @@ import os
 import pandas as pd
 import pdftotext
 import re
+import xlsxwriter
 
 
 def parse_pdf_to_fwf(folder, file):
@@ -109,30 +110,46 @@ def combine_dfs(first, second):
 
 def write_to_xlsx(df, folder, filename):
 
+    # We're only interested in some columns
     output_columns = ["Code", "Short", "Long", "THIS PERIOD 1", "THIS PERIOD 2"]
 
+    # Pull these columns out of the dataframe and add a new column to show if amounts are equal in the two periods
     output_df = df[output_columns]
     output_df = output_df.assign(Equal=False)
     output_df['Equal'] = np.where(((output_df["THIS PERIOD 1"] == output_df["THIS PERIOD 2"]) |
                                   (output_df["THIS PERIOD 2"].isnull() & output_df["THIS PERIOD 2"].isnull())),
                                   True, False)
 
-    writer = pd.ExcelWriter(os.path.join(folder, filename), engine="xlsxwriter")
-    output_df.to_excel(writer, sheet_name="Sheet1")
+    # The Excel sheet wants the headers in a specific format
+    column_headers = [{"header": col} for col in list(output_df)]
+    column_headers.append({"header": "Checked"})
 
-    workbook = writer.book
-    worksheet = writer.sheets["Sheet1"]
+    # Create an Excel workbook with a table ready to take the contents of the df, and initialise headers
+    workbook = xlsxwriter.Workbook(os.path.join(folder, filename))
+    worksheet = workbook.add_worksheet()
+    worksheet.add_table(0, 0, len(output_df.index), len(list(output_df)),
+                        {"columns": column_headers,
+                         "banded_rows": False,
+                         "style": "Table Style Medium 9"})
 
+    # We'll need some of the columns to have particular formats
     format_code = workbook.add_format({"num_format": "0000"})
     format_financial = workbook.add_format({"num_format": "#,##0.00"})
 
-    worksheet.set_column(1, 1, 9.17, format_code)
-    worksheet.set_column(2, 2, 9.17)
-    worksheet.set_column(3, 3, 22.5)
-    worksheet.set_column(4, 4, 16.67, format_financial)
-    worksheet.set_column(5, 5, 16.67, format_financial)
+    # Put empty strings where no data is available, then write the df to the Excel sheet
+    output_df.fillna("", inplace=True)
+    for index, row in output_df.iterrows():
+        worksheet.write_row(index + 1, 0, list(row))
 
-    writer.save()
+    # Apply formatting and make columns wider
+    worksheet.set_column(0, 0, 9.17, format_code)
+    worksheet.set_column(1, 1, 9.17)
+    worksheet.set_column(2, 2, 22.5)
+    worksheet.set_column(3, 3, 16.67, format_financial)
+    worksheet.set_column(4, 4, 16.67, format_financial)
+
+    # Close workbook to finish
+    workbook.close()
 
 
 if __name__ == "__main__":
