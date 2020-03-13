@@ -127,14 +127,16 @@ def write_to_xlsx(df, folder, filename):
     # Create an Excel workbook with a table ready to take the contents of the df, and initialise headers
     workbook = xlsxwriter.Workbook(os.path.join(folder, filename))
     worksheet = workbook.add_worksheet()
-    worksheet.add_table(0, 0, len(output_df.index), len(list(output_df)),
+    worksheet.add_table(0, 0, len(output_df.index) + 1, len(list(output_df)),
                         {"columns": column_headers,
                          "banded_rows": False,
-                         "style": "Table Style Medium 9"})
+                         "style": "Table Style Medium 9",
+                         "total_row": True})
 
     # We'll need some of the columns to have particular formats
     format_code = workbook.add_format({"num_format": "0000"})
     format_financial = workbook.add_format({"num_format": "#,##0.00"})
+    format_issue = workbook.add_format({"bg_color": "#FFC7CE", "font_color": "#9C0006"})
 
     # Put empty strings where no data is available, then write the df to the Excel sheet
     output_df.fillna("", inplace=True)
@@ -147,6 +149,8 @@ def write_to_xlsx(df, folder, filename):
     worksheet.set_column(2, 2, 22.5)
     worksheet.set_column(3, 3, 16.67, format_financial)
     worksheet.set_column(4, 4, 16.67, format_financial)
+    worksheet.conditional_format(1, 5, len(output_df.index), 5,
+                                 {"type": "cell", "criteria": "!=", "value": "TRUE", "format": format_issue})
 
     # Close workbook to finish
     workbook.close()
