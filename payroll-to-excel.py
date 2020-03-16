@@ -112,23 +112,18 @@ def write_to_xlsx(df, folder, filename):
 
     # We're only interested in some columns
     output_columns = ["Code", "Short", "Long", "THIS PERIOD 1", "THIS PERIOD 2"]
+    df = df[output_columns]
 
-    # Pull these columns out of the dataframe and add a new column to show if amounts are equal in the two periods
-    output_df = df[output_columns]
-    output_df = output_df.assign(Equal=False)
-    output_df['Equal'] = np.where(((output_df["THIS PERIOD 1"] == output_df["THIS PERIOD 2"]) |
-                                  (output_df["THIS PERIOD 2"].isnull() & output_df["THIS PERIOD 2"].isnull())),
-                                  True, False)
-
-    # The Excel sheet wants the headers in a specific format
-    column_headers = [{"header": col} for col in list(output_df)]
-    column_headers.append({"header": "Checked"})
+    # Construct our list of columns, and add formula for equality check
+    columns = [{"header": col} for col in list(df)]
+    columns.extend([{"header": "Equal", "formula": "EXACT([@[THIS PERIOD 1]],[@[THIS PERIOD 2]])"},
+                    {"header": "Checked"}])
 
     # Create an Excel workbook with a table ready to take the contents of the df, and initialise headers
     workbook = xlsxwriter.Workbook(os.path.join(folder, filename))
     worksheet = workbook.add_worksheet()
-    worksheet.add_table(0, 0, len(output_df.index) + 1, len(list(output_df)),
-                        {"columns": column_headers,
+    worksheet.add_table(0, 0, len(df.index) + 1, len(columns) - 1,
+                        {"columns": columns,
                          "banded_rows": False,
                          "style": "Table Style Medium 9",
                          "total_row": True})
@@ -139,8 +134,8 @@ def write_to_xlsx(df, folder, filename):
     format_issue = workbook.add_format({"bg_color": "#FFC7CE", "font_color": "#9C0006"})
 
     # Put empty strings where no data is available, then write the df to the Excel sheet
-    output_df.fillna("", inplace=True)
-    for index, row in output_df.iterrows():
+    df = df.fillna("")
+    for index, row in df.iterrows():
         worksheet.write_row(index + 1, 0, list(row))
 
     # Apply formatting and make columns wider
@@ -149,7 +144,7 @@ def write_to_xlsx(df, folder, filename):
     worksheet.set_column(2, 2, 22.5)
     worksheet.set_column(3, 3, 16.67, format_financial)
     worksheet.set_column(4, 4, 16.67, format_financial)
-    worksheet.conditional_format(1, 5, len(output_df.index), 5,
+    worksheet.conditional_format(1, 5, len(df.index), 5,
                                  {"type": "cell", "criteria": "!=", "value": "TRUE", "format": format_issue})
 
     # Close workbook to finish
