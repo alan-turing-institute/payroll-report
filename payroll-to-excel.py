@@ -117,7 +117,8 @@ def write_to_xlsx(df, folder, filename):
     # Construct our list of columns, and add formula for equality check
     columns = [{"header": col} for col in list(df)]
     columns.extend([{"header": "Equal", "formula": "EXACT([@[THIS PERIOD 1]],[@[THIS PERIOD 2]])"},
-                    {"header": "Checked"}])
+                    {"header": "Checked by HR"},
+                    {"header": "Checked by Finance"}])
 
     # Create an Excel workbook with a table ready to take the contents of the df, and initialise headers
     workbook = xlsxwriter.Workbook(os.path.join(folder, filename))
@@ -146,6 +147,7 @@ def write_to_xlsx(df, folder, filename):
     worksheet.set_column(4, 4, 16, format_financial)
     worksheet.conditional_format(1, 5, 20, 5,
                                  {"type": "cell", "criteria": "!=", "value": "TRUE", "format": format_issue})
+    worksheet.set_column(6, 7, 16)
 
     # Close workbook to finish
     workbook.close()
