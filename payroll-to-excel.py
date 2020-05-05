@@ -110,15 +110,18 @@ def combine_dfs(first, second):
 
 def write_to_xlsx(df, folder, filename):
 
-    # We're only interested in some columns
-    output_columns = ["Code", "Details", "Further details", "THIS PERIOD 1", "THIS PERIOD 2"]
-    df = df[output_columns]
+    # Construct our list of columns to output, and add formula for equality check
+    columns = [{"header": "Code"},
+               {"header": "Details"},
+               {"header": "Further details", "total_string": "TOTAL"},
+               {"header": "THIS PERIOD 1", "total_function": "sum"},
+               {"header": "THIS PERIOD 2", "total_function": "sum"},
+               {"header": "Equal", "formula": "EXACT([@[THIS PERIOD 1]],[@[THIS PERIOD 2]])"},
+               {"header": "Checked by HR"},
+               {"header": "Checked by Finance"}]
 
-    # Construct our list of columns, and add formula for equality check
-    columns = [{"header": col} for col in list(df)]
-    columns.extend([{"header": "Equal", "formula": "EXACT([@[THIS PERIOD 1]],[@[THIS PERIOD 2]])"},
-                    {"header": "Checked by HR"},
-                    {"header": "Checked by Finance"}])
+    # Get the columns that we will output from the data frame
+    df = df[[c["header"] for c in columns[:5]]]
 
     # Create an Excel workbook with a table ready to take the contents of the df, and initialise headers
     workbook = xlsxwriter.Workbook(os.path.join(folder, filename))
