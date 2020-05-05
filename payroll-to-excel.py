@@ -48,7 +48,7 @@ def check_and_clean_df(df):
             raise Exception("Expected column name to be {}, not {}".format(expcol, col))
 
     # Check first column (should be three-parts, parse and separate, remove total row and retain for final check)
-    df["Code"], df["Short"], df["Long"] = zip(*df["ELEMENT DETAILS"].apply(parse_element_details))
+    df["Code"], df["Details"], df["Further details"] = zip(*df["ELEMENT DETAILS"].apply(parse_element_details))
 
     # Check second - fifth columns (should be numbers with max 2 dp, move ending - to start for negative)
     for col in financial_columns:
@@ -56,8 +56,8 @@ def check_and_clean_df(df):
 
     # Drop old element details column and move total row to a separate table
     df = df.drop(columns=["ELEMENT DETAILS"])
-    total = df.loc[df["Long"] == "TOTAL"]
-    df.drop(df.loc[df["Long"] == "TOTAL"].index, inplace=True)
+    total = df.loc[df["Further details"] == "TOTAL"]
+    df.drop(df.loc[df["Further details"] == "TOTAL"].index, inplace=True)
 
     # Check totals
     for col in financial_columns:
@@ -70,9 +70,9 @@ def check_and_clean_df(df):
 def parse_element_details(elt_details):
 
     # This regex should catch:
-    #   - code: (optional) four (or more) digit number
-    #   - short: (optional) one to six characters (no spaces), bounded at end by at least two consecutive spaces
-    #   - long: characters, possibly separated by single spaces
+    #   - code: (optional) four (or more) digit number (ELEMENT DETAILS in original output spreadsheet)
+    #   - short: (optional) one to six characters (no spaces), bounded at end by at least two consecutive spaces (Details in original)
+    #   - long: characters, possibly separated by single spaces (Further Details in original)
 
     m = re.match(r"(?P<code>\d{4}) +(?P<short>\S{1,6}(?=\s{2}))? +(?P<long>(\S+\s?)+)", elt_details)
     if m is None:
@@ -105,13 +105,13 @@ def combine_dfs(first, second):
 
     # Combine into a single dataframe
 
-    return pd.merge(first, second, on=["Code", "Short", "Long"], suffixes=[" 1", " 2"])
+    return pd.merge(first, second, on=["Code", "Details", "Further details"], suffixes=[" 1", " 2"])
 
 
 def write_to_xlsx(df, folder, filename):
 
     # We're only interested in some columns
-    output_columns = ["Code", "Short", "Long", "THIS PERIOD 1", "THIS PERIOD 2"]
+    output_columns = ["Code", "Details", "Further details", "THIS PERIOD 1", "THIS PERIOD 2"]
     df = df[output_columns]
 
     # Construct our list of columns, and add formula for equality check
@@ -139,12 +139,12 @@ def write_to_xlsx(df, folder, filename):
         worksheet.write_row(index + 1, 0, list(row))
 
     # Apply formatting and make columns wider
-    worksheet.set_column(0, 0, 9.17, format_code)
-    worksheet.set_column(1, 1, 9.17)
-    worksheet.set_column(2, 2, 22.5)
-    worksheet.set_column(3, 3, 16.67, format_financial)
-    worksheet.set_column(4, 4, 16.67, format_financial)
-    worksheet.conditional_format(1, 5, len(df.index), 5,
+    worksheet.set_column(0, 0, 8, format_code)
+    worksheet.set_column(1, 1, 12)
+    worksheet.set_column(2, 2, 20)
+    worksheet.set_column(3, 3, 16, format_financial)
+    worksheet.set_column(4, 4, 16, format_financial)
+    worksheet.conditional_format(1, 5, 20, 5,
                                  {"type": "cell", "criteria": "!=", "value": "TRUE", "format": format_issue})
 
     # Close workbook to finish
