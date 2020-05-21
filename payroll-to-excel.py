@@ -1,4 +1,5 @@
 import argparse
+import datetime
 import numpy as np
 import os
 import pandas as pd
@@ -18,12 +19,21 @@ def parse_pdf_to_fwf(folder, file):
     text = pdf[0]
     split_text = text.split("\n")
 
-    output_file = file[:-4] + ".txt"
+    # Extract the year and month for which this report was generated and convert from financial calendar to date
+    m = re.search(r"BALANCE CONTROL (?P<year>\d{4})/(?P<month>\d{2})", split_text[1])
+    year = int(m["year"])
+    month = int(m["month"]) + 3
+    if month > 12:
+        year += 1
+        month -= 12
+    date_str = datetime.date(year, month, 1).strftime("%b-%Y")
 
+    # Write out a txt file containing the main table
+    output_file = file[:-4] + ".txt"
     with open(os.path.join(folder, output_file), "w") as outfile:
         [outfile.write("%s\n" % l) for l in split_text[2:-1]]
 
-    return output_file
+    return output_file, date_str
 
 
 def fwf_to_df(folder, file):
@@ -101,22 +111,24 @@ def parse_and_check_financial_columns(value):
         raise Exception("Unexpected entry in column: '{}'".format(value)) 
 
 
-def combine_dfs(first, second):
+def combine_dfs(first, second, first_date, second_date):
 
-    # Combine into a single dataframe
+    # Combine into a single dataframe and rename "THIS PERIOD" columns so that they are named by month
+    combined_df = pd.merge(first, second, on=["Code", "Details", "Further details"], suffixes=[" 1", " 2"])
+    combined_df = combined_df.rename(columns={"THIS PERIOD 1": first_date, "THIS PERIOD 2": second_date})
 
-    return pd.merge(first, second, on=["Code", "Details", "Further details"], suffixes=[" 1", " 2"])
+    return combined_df
 
 
-def write_to_xlsx(df, folder, filename):
+def write_to_xlsx(df, first_date, second_date, folder, filename):
 
     # Construct our list of columns to output, and add formula for equality check
     columns = [{"header": "Code"},
                {"header": "Details"},
                {"header": "Further details", "total_string": "TOTAL"},
-               {"header": "THIS PERIOD 1", "total_function": "sum"},
-               {"header": "THIS PERIOD 2", "total_function": "sum"},
-               {"header": "Equal", "formula": "EXACT([@[THIS PERIOD 1]],[@[THIS PERIOD 2]])"},
+               {"header": first_date, "total_function": "sum"},
+               {"header": second_date, "total_function": "sum"},
+               {"header": "Equal", "formula": "EXACT([@[{}]],[@[{}]])".format(first_date, second_date)},
                {"header": "Checked by HR"},
                {"header": "Checked by Finance"}]
 
@@ -165,13 +177,20 @@ if __name__ == "__main__":
     parser.add_argument("--output", type=str, default="output.xlsx", help="Name of the output Excel file")
     args = parser.parse_args()
 
-    first_fwf = parse_pdf_to_fwf(args.folder, args.first)
+    first_fwf, first_date = parse_pdf_to_fwf(args.folder, args.first)
     first_df = fwf_to_df(args.folder, first_fwf)
     first_df = check_and_clean_df(first_df)
 
-    second_fwf = parse_pdf_to_fwf(args.folder, args.second)
+    second_fwf, second_date = parse_pdf_to_fwf(args.folder, args.second)
     second_df = fwf_to_df(args.folder, first_fwf)
     second_df = check_and_clean_df(second_df)
 
-    combined_df = combine_dfs(first_df, second_df)
-    write_to_xlsx(combined_df, args.folder, args.output)
+    # While testing, we often use the same file twice so first_data is equal to second_date - so add a fix here for now
+    if first_date == second_date:
+        second_date = second_date + " (rep)"
+        print("\nRepeated dates found...")
+        print("Second occurrence of {} set to {}".format(first_date, second_date))
+
+
+    combined_df = combine_dfs(first_df, second_df, first_date, second_date)
+    write_to_xlsx(combined_df, first_date, second_date, args.folder, args.output)
