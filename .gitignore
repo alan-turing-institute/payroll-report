@@ -2,6 +2,7 @@
 *.pdf
 
 # Intermediate files used in processing
+*.png
 *.txt
 !requirements.txt
 
