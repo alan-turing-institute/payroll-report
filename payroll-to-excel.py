@@ -3,10 +3,11 @@ import datetime
 import numpy as np
 import os
 import pandas as pd
+import pdf2image
 import pdftotext
+import pytesseract
 import re
 import xlsxwriter
-
 
 def parse_pdf_to_fwf(folder, file):
 
@@ -17,6 +18,10 @@ def parse_pdf_to_fwf(folder, file):
         pdf = pdftotext.PDF(in_pdf)
 
     text = pdf[0]
+    if  len(text) ==  0:
+        print("No text found; pdf file contains an image\nConverting to pdf with text...")
+        text = get_text_from_image_pdf(folder, file)
+
     split_text = text.split("\n")
 
     # Extract the year and month for which this report was generated and convert from financial calendar to date
@@ -34,6 +39,30 @@ def parse_pdf_to_fwf(folder, file):
         [outfile.write("%s\n" % l) for l in split_text[2:-1]]
 
     return output_file, date_str
+
+
+def get_text_from_image_pdf(folder, file):
+
+    output_pdf_file = os.path.join(folder, "text_output.pdf")
+
+    # Convert the pdf to a png image
+    pdf2image.convert_from_path(os.path.join(folder, file), fmt="png", single_file=True, output_folder=args.folder, output_file="tmp")
+
+    # Generate a pdf with selectable text based on the image
+    pdf = pytesseract.image_to_pdf_or_hocr(os.path.join(folder, "tmp.png"), extension="pdf")
+    with open(output_pdf_file, "w+b") as f:
+        f.write(pdf)
+
+    # Extract the text from the pdf
+    with open(output_pdf_file, "rb") as in_pdf:
+        pdf = pdftotext.PDF(in_pdf)
+
+    # Check that we've actually got some text out from the converted file
+    text = pdf[0]
+    if len(text) == 0:
+        Exception("Could not extract text from converted pdf file")
+
+    return text
 
 
 def fwf_to_df(folder, file):
