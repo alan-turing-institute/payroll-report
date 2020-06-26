@@ -83,7 +83,6 @@ def check_and_clean_df(df):
 
     # Change multiple consecutive spaces to a single space
     # (tesseract-generated pdfs often insert more spaces between words than intended, even though the overall formatting is generally fine)
-
     spaces_pattern = re.compile(r"\s+")
     df = df.rename(columns={col: spaces_pattern.subn(" ", col)[0] for col in list(df.columns)})
 
@@ -98,6 +97,9 @@ def check_and_clean_df(df):
 
     # Check first column (should be three-parts, parse and separate, remove total row and retain for final check)
     df["Code"], df["Details"], df["Further details"] = zip(*df["ELEMENT DETAILS"].apply(parse_element_details))
+
+    # Remove any additional spaces from second - fifth columns (another potential issue in tesseract-generated pdfs)
+    df[financial_columns] = df[financial_columns].replace({" ": ""}, regex=True)
 
     # Check second - fifth columns (should be numbers with max 2 dp, move trailing "-" character to start when negative)
     for col in financial_columns:
@@ -141,13 +143,15 @@ def parse_and_check_financial_columns(value):
     if pd.isna(value):
         return value
 
-    m = re.match(r"(?P<value>\d+.\d{2}){1}(?P<sign>-)?", value)
-    if m["sign"] is None:
+    m = re.match(r"(?P<value>\d+.\d{2}){1}(?P<sign>-)?$", value)
+    if m is None:
+        raise Exception("Unexpected entry format in column: '{}'".format(value))
+    elif m["sign"] is None:
         return float(m["value"])
     elif m["sign"] == "-":
         return -float(m["value"])
     else:
-        raise Exception("Unexpected entry in column: '{}'".format(value)) 
+        raise Exception("Unexpected entry format in column: '{}'".format(value))
 
 
 def combine_dfs(first, second, first_date, second_date):
