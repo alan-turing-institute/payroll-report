@@ -77,7 +77,13 @@ def check_and_clean_df(df):
     expected_columns = ["ELEMENT DETAILS", "BROUGHT FORWARD", "THIS PERIOD", "ADJUSTMENT", "CARRIED FORWARD"]
     financial_columns = ["BROUGHT FORWARD", "THIS PERIOD", "ADJUSTMENT", "CARRIED FORWARD"]
 
-    # Check columns
+    # Change multiple consecutive spaces to a single space
+    # (tesseract-generated pdfs often insert more spaces between words than intended, even though the overall formatting is generally fine)
+
+    spaces_pattern = re.compile(r"\s+")
+    df = df.rename(columns={col: spaces_pattern.subn(" ", col)[0] for col in list(df.columns)})
+
+    # Check that the expected columns are present
 
     if len(list(df)) != len(expected_columns):
         raise Exception("Number of columns is not {}, as expected".format(len(expected_columns)))
@@ -89,7 +95,7 @@ def check_and_clean_df(df):
     # Check first column (should be three-parts, parse and separate, remove total row and retain for final check)
     df["Code"], df["Details"], df["Further details"] = zip(*df["ELEMENT DETAILS"].apply(parse_element_details))
 
-    # Check second - fifth columns (should be numbers with max 2 dp, move ending - to start for negative)
+    # Check second - fifth columns (should be numbers with max 2 dp, move trailing "-" character to start when negative)
     for col in financial_columns:
         df[col] = df[col].apply(parse_and_check_financial_columns)
 
