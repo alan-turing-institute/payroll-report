@@ -19,7 +19,7 @@ def parse_pdf_to_fwf(folder, file):
 
     text = pdf[0]
     if  len(text) ==  0:
-        print("No text found; pdf file {} contains an image\nConverting to pdf with text...".format(file))
+        print("No text found; pdf file {} contains an image\nConverting to pdf with text...\n".format(file))
         text = get_text_from_image_pdf(folder, file)
 
     # Remove "|" characters (sometimes carried in from tesseract-generated pdfs)
@@ -88,8 +88,13 @@ def check_and_clean_df(df):
 
     # Check that the expected columns are present
 
-    if len(list(df)) != len(expected_columns):
-        raise Exception("Number of columns is not {}, as expected".format(len(expected_columns)))
+    if len(list(df)) > len(expected_columns):
+        # Quick check: See if there are too many columns because two-word col names have been split
+        df = combine_column_check(df, expected_columns)
+        if len(list(df)) > len(expected_columns):
+            raise Exception("Number of columns is greater than expected:\n{}".format(list(df)))
+    elif len(list(df)) < len(expected_columns):
+        raise Exception("Number of columns is less than expected:\n{}".format(list(df)))
 
     for col, expcol in zip(list(df), expected_columns):
         if col != expcol:
@@ -114,7 +119,25 @@ def check_and_clean_df(df):
     for col in financial_columns:
         expected_total = 0.0 if pd.isna(total[col].iloc[0]) else total[col].iloc[0] # NaN values will sum to 0, so make sure TOTAL is in the same form if empty
         if df[col].sum().round(2) != expected_total:
-            raise Exception("Total of column '{}' does not match value from original document".format(col))
+            raise Exception("Total of column '{}' ({}) does not match value from original document ({})".format(col, df[col].sum().round(2), expected_total))
+
+    return df
+
+def combine_column_check(df, expected_columns):
+
+    # If columns are empty, it can lead to difficulties identifying the column boundaries
+    # See if any of the columns are empty, and if so, whether the column names have originated from a split at a space in the name
+
+    empty_cols = [col for col in df.columns if df[col].isnull().all()]
+
+    # See if any of the pairs of empty columns match the names of the expected columns
+    for c1, c2 in zip(empty_cols[:-1], empty_cols[1:]):
+        if c1 + " " + c2 in expected_columns:
+            print("Columns '{}' and '{}' -> '{}' found in expected column names list".format(c1, c2, c1 + " " + c2))
+            print("Removing empty column '{}' and combining with empty column '{}'...\n".format(c1, c2))
+            df = df.drop(columns=c1)
+            df = df.rename(columns={c2: c1 + " " + c2})
+        break
 
     return df
 
@@ -141,7 +164,8 @@ def parse_and_check_financial_columns(value):
     # All values in these columns should either refer to monetary values (two decimal places, optional -ve sign at end)
     # or be NaN
 
-    if pd.isna(value):
+    # No need to check for minus sign if value is empty or already in numerical form
+    if pd.isna(value) or isinstance(value, float):
         return value
 
     m = re.match(r"(?P<value>\d+.\d{2}){1}(?P<sign>-)?$", value)
