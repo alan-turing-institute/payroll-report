@@ -211,10 +211,10 @@ if __name__ == "__main__":
     first_df = check_and_clean_df(first_df)
 
     second_fwf, second_date = parse_pdf_to_fwf(args.folder, args.second)
-    second_df = fwf_to_df(args.folder, first_fwf)
+    second_df = fwf_to_df(args.folder, second_fwf)
     second_df = check_and_clean_df(second_df)
 
-    # While testing, we often use the same file twice so first_data is equal to second_date - so add a fix here for now
+    # While testing, we often use the same file twice so first_date is equal to second_date - so add a fix here for now
     if first_date == second_date:
         second_date = second_date + " (rep)"
         print("\nRepeated dates found...")
