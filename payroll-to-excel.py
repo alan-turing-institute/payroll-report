@@ -50,7 +50,7 @@ def get_text_from_image_pdf(folder, file):
     output_pdf_file = os.path.join(folder, "text_output.pdf")
 
     # Convert the pdf to a png image
-    pdf2image.convert_from_path(os.path.join(folder, file), fmt="png", single_file=True, output_folder=args.folder, output_file="tmp")
+    pdf2image.convert_from_path(os.path.join(folder, file), fmt="png", dpi=400, single_file=True, output_folder=args.folder, output_file="tmp")
 
     # Generate a pdf with selectable text based on the image
     pdf = pytesseract.image_to_pdf_or_hocr(os.path.join(folder, "tmp.png"), extension="pdf")
@@ -149,10 +149,10 @@ def parse_element_details(elt_details):
     #   - short: (optional) one to six characters (no spaces), bounded at end by at least two consecutive spaces (Details in original)
     #   - long: characters, possibly separated by single spaces (Further Details in original)
 
-    m = re.match(r"(?P<code>\d{4})\s{1,4}(?P<short>\S{1,6}(?=\s{2}))? +(?P<long>.*\S)", elt_details)
+    m = re.match(r"(?P<code>\d{4})\s{1,4}(?P<short>\S{1,6})? +(?P<long>\S.*\S)", elt_details)
 
     if m is None:
-        if elt_details == "TOTAL":
+        if "TOTAL" in elt_details:
             return np.nan, np.nan, "TOTAL"
         else:
             raise Exception("Cannot parse row '{}'".format(elt_details))
