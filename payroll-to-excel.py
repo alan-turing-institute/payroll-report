@@ -149,14 +149,16 @@ def parse_element_details(elt_details):
     #   - short: (optional) one to six characters (no spaces), bounded at end by at least two consecutive spaces (Details in original)
     #   - long: characters, possibly separated by single spaces (Further Details in original)
 
-    m = re.match(r"(?P<code>\d{4}) +(?P<short>\S{1,6}(?=\s{2}))? +(?P<long>(\S+\s?)+)", elt_details)
+    m = re.match(r"(?P<code>\d{4})\s{1,4}(?P<short>\S{1,6}(?=\s{2}))? +(?P<long>.*\S)", elt_details)
+
     if m is None:
         if elt_details == "TOTAL":
             return np.nan, np.nan, "TOTAL"
         else:
             raise Exception("Cannot parse row '{}'".format(elt_details))
     else:
-        return int(m["code"]), m["short"] if m["short"] is not None else np.nan, m["long"]
+        long_fixed_spaces = re.compile(r"\s+").subn(" ", m["long"])[0]
+        return int(m["code"]), m["short"] if m["short"] is not None else np.nan, long_fixed_spaces
 
 
 def parse_and_check_financial_columns(value):
