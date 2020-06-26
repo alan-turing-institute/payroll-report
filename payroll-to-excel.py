@@ -228,7 +228,7 @@ def write_to_xlsx(df, first_date, second_date, folder, filename):
     worksheet.set_column(2, 2, 20)
     worksheet.set_column(3, 3, 16, format_financial)
     worksheet.set_column(4, 4, 16, format_financial)
-    worksheet.conditional_format(1, 5, 20, 5,
+    worksheet.conditional_format(1, 5, len(df.index), 5,
                                  {"type": "cell", "criteria": "!=", "value": "TRUE", "format": format_issue})
     worksheet.set_column(6, 7, 16)
 
