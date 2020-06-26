@@ -187,6 +187,11 @@ def combine_dfs(first, second, first_date, second_date):
     combined_df = pd.merge(first, second, how="outer", on=["Code", "Details", "Further details"], suffixes=[" 1", " 2"])
     combined_df = combined_df.rename(columns={"THIS PERIOD 1": first_date, "THIS PERIOD 2": second_date})
 
+    # Rearrange the order so the df is sorted by the code
+    # Also reset index so that printing using iterrows works correctly later (not so neat, but it works nicely with the Excel writing process)
+    combined_df = combined_df.sort_values(by=["Code"], ascending=True)
+    combined_df = combined_df.reset_index(drop=True)
+
     return combined_df
 
 
