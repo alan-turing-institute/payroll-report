@@ -184,7 +184,7 @@ def parse_and_check_financial_columns(value):
 def combine_dfs(first, second, first_date, second_date):
 
     # Combine into a single dataframe and rename "THIS PERIOD" columns so that they are named by month
-    combined_df = pd.merge(first, second, on=["Code", "Details", "Further details"], suffixes=[" 1", " 2"])
+    combined_df = pd.merge(first, second, how="outer", on=["Code", "Details", "Further details"], suffixes=[" 1", " 2"])
     combined_df = combined_df.rename(columns={"THIS PERIOD 1": first_date, "THIS PERIOD 2": second_date})
 
     return combined_df
