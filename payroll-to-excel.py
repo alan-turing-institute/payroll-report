@@ -19,13 +19,13 @@ def parse_pdf_to_fwf(folder, file):
 
     text = pdf[0]
     if  len(text) ==  0:
-        print("No text found; pdf file contains an image\nConverting to pdf with text...")
+        print("No text found; pdf file {} contains an image\nConverting to pdf with text...".format(file))
         text = get_text_from_image_pdf(folder, file)
 
     split_text = text.split("\n")
 
     # Extract the year and month for which this report was generated and convert from financial calendar to date
-    m = re.search(r"BALANCE CONTROL (?P<year>\d{4})/(?P<month>\d{2})", split_text[1])
+    m = re.search(r"BALANCE\s+CONTROL\s+(?P<year>\d{4})/(?P<month>\d{2})", split_text[1])
     year = int(m["year"])
     month = int(m["month"]) + 3
     if month > 12:
