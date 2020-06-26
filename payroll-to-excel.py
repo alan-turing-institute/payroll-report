@@ -22,6 +22,10 @@ def parse_pdf_to_fwf(folder, file):
         print("No text found; pdf file {} contains an image\nConverting to pdf with text...".format(file))
         text = get_text_from_image_pdf(folder, file)
 
+    # Remove "|" characters (sometimes carried in from tesseract-generated pdfs)
+    text = text.replace("|", "")
+
+    # Split into separate lines
     split_text = text.split("\n")
 
     # Extract the year and month for which this report was generated and convert from financial calendar to date
