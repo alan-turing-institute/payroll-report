@@ -112,7 +112,8 @@ def check_and_clean_df(df):
 
     # Check totals
     for col in financial_columns:
-        if df[col].sum().round(2) != total[col].iloc[0]:
+        expected_total = 0.0 if pd.isna(total[col].iloc[0]) else total[col].iloc[0] # NaN values will sum to 0, so make sure TOTAL is in the same form if empty
+        if df[col].sum().round(2) != expected_total:
             raise Exception("Total of column '{}' does not match value from original document".format(col))
 
     return df
